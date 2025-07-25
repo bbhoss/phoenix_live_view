@@ -635,8 +635,20 @@ export default class LiveSocket {
       (e, type, view, targetEl, phxEvent, _phxTarget) => {
         const matchKey = targetEl.getAttribute(this.binding(PHX_KEY));
         const pressedKey = e.key && e.key.toLowerCase(); // chrome clicked autocompletes send a keydown without key
-        if (matchKey && matchKey.toLowerCase() !== pressedKey) {
-          return;
+        if (matchKey) {
+          let keyMatches;
+          if (matchKey.includes(',')) {
+            // Handle multiple keys separated by commas
+            const allowedKeys = matchKey.split(',').map(k => k.trim().toLowerCase());
+            keyMatches = allowedKeys.includes(pressedKey);
+          } else {
+            // Handle single key (backward compatibility)
+            keyMatches = matchKey.toLowerCase() === pressedKey;
+          }
+          
+          if (!keyMatches) {
+            return;
+          }
         }
 
         const data = { key: e.key, ...this.eventMeta(type, e, targetEl) };

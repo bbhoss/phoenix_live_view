@@ -977,5 +977,5 @@ test("empty text nodes are pruned", async ({ page }) => {
     () => document.getElementById("items").innerHTML.match(/\n/g).length,
   );
 
-  await expect(newCount).toEqual(initialCount);
+  expect(newCount).toEqual(initialCount);
 });

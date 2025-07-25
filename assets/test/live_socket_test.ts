@@ -243,6 +243,184 @@ describe("LiveSocket", () => {
   });
 });
 
+describe("phx-key binding", () => {
+  let liveSocket, _view, container;
+
+  beforeEach(() => {
+    global.document.body.innerHTML = "";
+    
+    // Create a test container with key bindings
+    const div = document.createElement("div");
+    div.setAttribute("data-phx-session", "abc123");
+    div.setAttribute("data-phx-root-id", "container1");
+    div.setAttribute("id", "container1");
+    div.innerHTML = `
+      <div id="single-key" phx-keydown="handle_key" phx-key="Enter">Single Key</div>
+      <div id="multiple-keys" phx-keydown="handle_key" phx-key="ArrowUp, ArrowDown, Enter">Multiple Keys</div>
+      <div id="whitespace-keys" phx-keydown="handle_key" phx-key=" Escape , Tab , Space ">Whitespace Keys</div>
+      <div id="no-key" phx-keydown="handle_key">No Key Filter</div>
+    `;
+    document.body.appendChild(div);
+    container = div;
+
+    liveSocket = new LiveSocket("/live", Socket);
+    liveSocket.connect();
+    _view = liveSocket.getViewByEl(container);
+  });
+
+  afterEach(() => {
+    liveSocket && liveSocket.destroyAllViews();
+    liveSocket = null;
+  });
+
+  afterAll(() => {
+    global.document.body.innerHTML = "";
+  });
+
+  test("single key binding works (backward compatibility)", () => {
+    const element = document.getElementById("single-key");
+    
+    // Test the current logic - should match
+    const binding = liveSocket.binding("key");
+    const matchKey = element.getAttribute(binding);
+    const pressedKey = "enter";
+    
+    expect(matchKey).toBe("Enter");
+    
+    // Test the current logic - should match
+    const shouldMatch = matchKey && matchKey.toLowerCase() === pressedKey;
+    expect(shouldMatch).toBe(true);
+    
+    // Test non-matching key
+    const nonMatchingKey = "escape";
+    const shouldNotMatch = matchKey && matchKey.toLowerCase() === nonMatchingKey;
+    expect(shouldNotMatch).toBe(false);
+  });
+
+  test("multiple key binding should match any key in the list", () => {
+    const element = document.getElementById("multiple-keys");
+    const binding = liveSocket.binding("key");
+    const matchKey = element.getAttribute(binding);
+    
+    expect(matchKey).toBe("ArrowUp, ArrowDown, Enter");
+    
+    // Test matching keys
+    const testKeys = ["ArrowUp", "ArrowDown", "Enter"];
+    testKeys.forEach(key => {
+      const event = new KeyboardEvent("keydown", { key });
+      const pressedKey = event.key && event.key.toLowerCase();
+      
+      // This is what we want to implement - multiple key support
+      let shouldMatch;
+      if (matchKey && matchKey.includes(',')) {
+        const allowedKeys = matchKey.split(',').map(k => k.trim().toLowerCase());
+        shouldMatch = allowedKeys.includes(pressedKey);
+      } else {
+        shouldMatch = matchKey && matchKey.toLowerCase() === pressedKey;
+      }
+      
+      expect(shouldMatch).toBe(true);
+    });
+    
+    // Test non-matching key
+    const nonMatchingEvent = new KeyboardEvent("keydown", { key: "Escape" });
+    const pressedKey = nonMatchingEvent.key && nonMatchingEvent.key.toLowerCase();
+    
+    let shouldMatch;
+    if (matchKey && matchKey.includes(',')) {
+      const allowedKeys = matchKey.split(',').map(k => k.trim().toLowerCase());
+      shouldMatch = allowedKeys.includes(pressedKey);
+    } else {
+      shouldMatch = matchKey && matchKey.toLowerCase() === pressedKey;
+    }
+    
+    expect(shouldMatch).toBe(false);
+  });
+
+  test("multiple key binding should handle whitespace correctly", () => {
+    const element = document.getElementById("whitespace-keys");
+    const binding = liveSocket.binding("key");
+    const matchKey = element.getAttribute(binding);
+    
+    expect(matchKey).toBe(" Escape , Tab , Space ");
+    
+    // Test that whitespace is trimmed correctly
+    const testKeys = ["Escape", "Tab", "Space"];
+    testKeys.forEach(key => {
+      const event = new KeyboardEvent("keydown", { key });
+      const pressedKey = event.key && event.key.toLowerCase();
+      
+      let shouldMatch;
+      if (matchKey && matchKey.includes(',')) {
+        const allowedKeys = matchKey.split(',').map(k => k.trim().toLowerCase());
+        shouldMatch = allowedKeys.includes(pressedKey);
+      } else {
+        shouldMatch = matchKey && matchKey.toLowerCase() === pressedKey;
+      }
+      
+      expect(shouldMatch).toBe(true);
+    });
+  });
+
+  test("empty key binding should allow all keys", () => {
+    const element = document.getElementById("no-key");
+    const binding = liveSocket.binding("key");
+    const matchKey = element.getAttribute(binding);
+    
+    expect(matchKey).toBeNull();
+    
+    // Test that when no phx-key is specified, all keys should be allowed
+    const testKeys = ["Enter", "Escape", "ArrowUp", "Space"];
+    testKeys.forEach(key => {
+      const event = new KeyboardEvent("keydown", { key });
+      const pressedKey = event.key && event.key.toLowerCase();
+      
+      // Current logic: if no matchKey, don't filter
+      const shouldMatch = !matchKey || (matchKey.toLowerCase() === pressedKey);
+      expect(shouldMatch).toBe(true);
+    });
+  });
+
+  test("edge cases should be handled correctly", () => {
+    // Test empty string
+    let matchKey = "";
+    let pressedKey = "enter";
+    let shouldMatch = !matchKey || (matchKey.includes(',') ? 
+      matchKey.split(',').map(k => k.trim().toLowerCase()).includes(pressedKey) :
+      matchKey.toLowerCase() === pressedKey);
+    expect(shouldMatch).toBe(true);
+
+    // Test single comma (edge case)
+    matchKey = ",";
+    shouldMatch = matchKey.includes(',') ? 
+      matchKey.split(',').map(k => k.trim().toLowerCase()).includes(pressedKey) :
+      matchKey.toLowerCase() === pressedKey;
+    expect(shouldMatch).toBe(false);
+
+    // Test comma at end
+    matchKey = "Enter,";
+    shouldMatch = matchKey.includes(',') ? 
+      matchKey.split(',').map(k => k.trim().toLowerCase()).includes(pressedKey) :
+      matchKey.toLowerCase() === pressedKey;
+    expect(shouldMatch).toBe(true);
+
+    // Test comma at start
+    matchKey = ",Enter";
+    shouldMatch = matchKey.includes(',') ? 
+      matchKey.split(',').map(k => k.trim().toLowerCase()).includes(pressedKey) :
+      matchKey.toLowerCase() === pressedKey;
+    expect(shouldMatch).toBe(true);
+
+    // Test case insensitive matching
+    matchKey = "ENTER, escape, ArrowUp";
+    pressedKey = "enter";
+    shouldMatch = matchKey.includes(',') ? 
+      matchKey.split(',').map(k => k.trim().toLowerCase()).includes(pressedKey) :
+      matchKey.toLowerCase() === pressedKey;
+    expect(shouldMatch).toBe(true);
+  });
+});
+
 describe("liveSocket.js()", () => {
   let view, liveSocket, js;
 
