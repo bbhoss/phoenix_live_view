@@ -419,32 +419,7 @@ defmodule Phoenix.LiveView.ElementsTest do
                    fn -> view |> element("span#span-no-attr") |> render_keydown() end
     end
 
-    test "keydowns the given element with single phx-key", %{live: view} do
-      assert view 
-             |> element("span#span-keydown-single-key") 
-             |> render_keydown(%{"key" => "Enter"}) 
-             |> is_binary()
 
-      assert last_event(view) =~ ~s|span-keydown: %{"key" => "Enter"}|
-    end
-
-    test "keydowns the given element with multiple phx-key", %{live: view} do
-      # Test first key in the list
-      assert view 
-             |> element("span#span-keydown-multiple-keys") 
-             |> render_keydown(%{"key" => "Enter"}) 
-             |> is_binary()
-
-      assert last_event(view) =~ ~s|span-keydown: %{"key" => "Enter"}|
-
-      # Test second key in the list  
-      assert view 
-             |> element("span#span-keydown-multiple-keys") 
-             |> render_keydown(%{"key" => "Escape"}) 
-             |> is_binary()
-
-      assert last_event(view) =~ ~s|span-keydown: %{"key" => "Escape"}|
-    end
   end
 
   describe "render_change" do

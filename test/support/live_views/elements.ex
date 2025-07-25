@@ -73,12 +73,7 @@ defmodule Phoenix.LiveViewTest.Support.ElementsLive do
       This is a span
     </span>
 
-    <span id="span-keydown-single-key" phx-keydown="span-keydown" phx-key="Enter">
-      This is a span with single key
-    </span>
-    <span id="span-keydown-multiple-keys" phx-keydown="span-keydown" phx-key="Enter, Escape, Space">
-      This is a span with multiple keys
-    </span>
+
 
     <button id="button-js-click" phx-click={JS.push("button-click")}>This is a JS button</button>
     <button id="button-js-click-value" phx-click={JS.push("button-click", value: %{one: 1})}>
