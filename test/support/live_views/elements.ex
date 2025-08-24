@@ -73,6 +73,8 @@ defmodule Phoenix.LiveViewTest.Support.ElementsLive do
       This is a span
     </span>
 
+
+
     <button id="button-js-click" phx-click={JS.push("button-click")}>This is a JS button</button>
     <button id="button-js-click-value" phx-click={JS.push("button-click", value: %{one: 1})}>
       This is a JS button with a value

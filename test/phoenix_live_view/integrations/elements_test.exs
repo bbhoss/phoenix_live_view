@@ -418,6 +418,8 @@ defmodule Phoenix.LiveView.ElementsTest do
                    "element selected by \"span#span-no-attr\" does not have phx-keydown or phx-window-keydown attributes",
                    fn -> view |> element("span#span-no-attr") |> render_keydown() end
     end
+
+
   end
 
   describe "render_change" do
